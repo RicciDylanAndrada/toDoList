@@ -38,8 +38,13 @@ const item2 = new Item({
 const item3 = new Item({
   name: "Book3"
 });
-const defaultItems = [item1, item2, item3]
+const defaultItems = [item1, item2, item3];
+const listSchema={
+  name:String,
+  items:[itemsSchema]
+}
 
+const List = mongoose.model("list",listSchema);
 
 
 app.get("/", function(req, res) {
@@ -75,8 +80,19 @@ app.post("/", function(req, res) {
   const newItem = new Item({
     name:itemName
   });
-  newItem.save()
-  res.redirect("/");
+
+
+  if(listName ==="Today"){
+    newItem.save()
+    res.redirect("/");
+  } else{
+    List.findOne({name:listName},function(err,foundList){
+      foundList.items.push(newItem);
+      foundList.save();
+      res.redirect("/"+listName);
+    });
+  }
+
 
 
 });
@@ -91,19 +107,30 @@ app.post("/removeTask", function(req, res) {
   }
 })
 
-app.get("/work", function(req, res) {
-  res.render("list", {
-    listTitle: "Work List",
-    newListItem: workItems
+app.get("/:categoryType",function(req,res){
+  const param = req.params.categoryType;
+  List.findOne({name:param},function(err,foundList){
+    if(!err){
+      if(!foundList){
+        const list = new List({
+          name:param,
+          items:defaultItems
+        });
+
+      list.save();
+      res.redirect("/"+param)
+      }
+      else{
+        res.render("list",{listTitle:foundList.name,newListItem:foundList.items})
+      }
+    }
   });
 
-})
-// app.post("/work",function(req,res){
-//   let item = req.body.newItem;
-//   items.push(item);
-//   res.redirect("/")
-// })
 
+
+
+
+});
 app.post("/delete",function(req,res){
   const checkedItem = (req.body.checkBox);
   Item.findByIdAndRemove(checkedItem,function(err){
